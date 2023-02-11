@@ -97,107 +97,56 @@ class Gomoku:
         self.ending = pygame.transform.scale(self.ending, (640, 640))
 
     def move(self, row, column):
-        if self.board[row][column] == EMPTY:
-            self.board[row][column] = BLACK if self.isblack else WHITE
-            self.isblack = not self.isblack
-            return True
+        if 0 <= row < 15 and 0 <= column < 15:
+            if self.board[row][column] == EMPTY:
+                self.board[row][column] = BLACK if self.isblack else WHITE
+                self.isblack = not self.isblack
+                return True
 
         # invalid move
         return False
 
-    # return true if there is any winner
-    def win(self):
+    # apply dfs to decide winner
+    def win(self, cordinate, direction, level, currentpiece):
+        row, column = cordinate
+        if currentpiece == 'White':
+            temp = WHITE
+        elif currentpiece == 'Black':
+            temp = BLACK
 
-        # vertical and horizontal traversal
-        for i in range(15):
-            # check vertically
-            flag = 0
-            for cell in self.board:
-                if cell[i] == BLACK:
-                    flag += 1
-                    if flag == 5:
-                        print('black wins! ')
-                        return 'Black'
-                else:
-                    flag = 0
+        if 0 <= row < 15 and 0 <= column < 15:
+            # base case: found winner
+            if level == 6:
+                return currentpiece
+            
+            # base case: no winner
+            if self.board[row][column] != temp:
+                return ''
 
-            flag = 0
-            for cell in self.board:
-                if cell[i] == WHITE:
-                    flag += 1
-                    if flag == 5:
-                        print('white wins! ')
-                        return 'White'
-                else:
-                    flag = 0
+        else:
+            return ''
 
-            # check vertically
-            flag = 0
-            for cell in self.board[i]:
-                if cell == BLACK:
-                    flag += 1
-                    if flag == 5:
-                        print('black wins! ')
-                        return 'Black'
-                else:
-                    flag = 0
+        # move 8 directions
+        if direction == 'north':
+            return self.win((row - 1, column), 'north', level + 1, currentpiece)
+        elif direction == 'south':
+            return self.win((row + 1, column), 'south', level + 1, currentpiece)
+        elif direction == 'west':
+            return self.win((row, column - 1), 'west', level + 1, currentpiece)
+        elif direction == 'east':
+            return self.win((row, column + 1), 'east', level + 1, currentpiece)
+        elif direction == 'northwest':
+            return self.win((row - 1, column - 1), 'northwest', level + 1, currentpiece)
+        elif direction == 'northeast':
+            return self.win((row - 1, column + 1), 'northeast', level + 1, currentpiece)
+        if direction == 'southwest':
+            return self.win((row + 1, column - 1), 'southwest', level + 1, currentpiece)
+        if direction == 'southeast':
+            return self.win((row + 1, column + 1), 'southeast', level + 1, currentpiece)
 
-            flag = 0
-            for cell in self.board[i]:
-                if cell == WHITE:
-                    flag += 1
-                    if flag == 5:
-                        print('white wins! ')
-                        return 'White'
-                else:
-                    flag = 0
+        
 
-        # diagonal traversal
-        for x in range(4, 25):
-            flag = 0
-            for i,row in enumerate(self.board):
-                if 14 >= x - i >= 0 and row[x - i] == BLACK:
-                    flag += 1
-                    if flag == 5:
-                        print('black wins!')
-                        return 'Black'
-                else:
-                    flag = 0
-    
-        for x in range(4, 25):
-            flag = 0
-            for i,row in enumerate(self.board):
-                if 14 >= x - i >= 0 and row[x - i] == WHITE:
-                    flag += 1
-                    if flag == 5:
-                        print('white wins!')
-                        return 'White'
-                else:
-                    flag = 0
-    
-        for x in range(11, -11, -1):
-            flag = 0
-            for i,row in enumerate(self.board):
-                if 0 <= x + i <= 14 and row[x + i] == BLACK:
-                    flag += 1
-                    if flag == 5:
-                        print('black wins!')
-                        return 'Black'
-                else:
-                    flag = 0
-    
-        for x in range(11, -11, -1):
-            flag = 0
-            for i,row in enumerate(self.board):
-                if 0 <= x + i <= 14 and row[x + i] == WHITE:
-                    flag += 1
-                    if flag == 5:
-                        print('white wins!')
-                        return 'White'
-                else:
-                    flag = 0
-
-        return ''
+        
 
     # method to draw everything for the game
     def draw(self, win):
@@ -294,10 +243,19 @@ def playgame(gomoku, win, piecesound, clicksound, gui_font):
                 gomoku.move(row, column)
                 piecesound.play()
 
-                if gomoku.win() != '':
-                    winner = gomoku.win()
-                    run = False
-                    endgame(gomoku, win, gui_font, piecesound, clicksound, winner)
+                # after movement, piece color is opposite
+                if gomoku.isblack == False:
+                    currentpiece = 'Black'
+                else:
+                    currentpiece = 'White'
+
+                # check 8 directions from current move
+                for directions in ['north', 'south', 'west', 'east', 'northwest', 'northeast', 'southwest', 'southeast']:
+                    winner = gomoku.win((row, column), directions, 1, currentpiece)
+                    if winner != '':
+                        run = False
+                        endgame(gomoku, win, gui_font, piecesound, clicksound, winner)
+                        break
 
 def endgame(gomoku, win, gui_font, piecesound, clicksound, winner):
     # ending interface
@@ -361,6 +319,7 @@ def main():
 
     
     pygame.quit()
+
 
 if __name__ == '__main__':
     main()
