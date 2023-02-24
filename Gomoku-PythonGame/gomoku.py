@@ -1,4 +1,4 @@
-import pygame, sys
+import pygame, sys, gomokuAI
 
 # set black, white and empty in every cell of the board
 EMPTY = 0
@@ -143,9 +143,6 @@ class Gomoku:
             return self.win((row + 1, column - 1), 'southwest', level + 1, currentpiece)
         if direction == 'southeast':
             return self.win((row + 1, column + 1), 'southeast', level + 1, currentpiece)
-
-        
-
         
 
     # method to draw everything for the game
