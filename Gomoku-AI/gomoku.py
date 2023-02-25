@@ -96,6 +96,9 @@ class Gomoku:
         self.ending = pygame.image.load('ending.jpg')
         self.ending = pygame.transform.scale(self.ending, (640, 640))
 
+        self.ai = False
+        self.aiHard = False
+
     def move(self, row, column):
         if 0 <= row < 15 and 0 <= column < 15:
             if self.board[row][column] == EMPTY:
@@ -182,9 +185,11 @@ def startgame(gomoku, win, gui_font, clicksound):
     win.blit(gomoku.background, (0, 0))
     
     # draw buttons
-    button1 = Button('Start',200,40,(100,400),5, gui_font)
-    button2 = Button('About',200,40,(100,450),5, gui_font)
-    button3 = Button('Exit',200,40,(100,500),5, gui_font)
+    startGame = Button('Start Game',210,30,(100,380),5, gui_font)
+    startGameAI = Button('Start Game AI', 210, 30, (100, 420), 5, gui_font)
+    startGameAIhard = Button('Start Game AI Hard', 210, 30, (100, 460), 5, gui_font)
+    about = Button('About',210,30,(100,500),5, gui_font)
+    exit = Button('Exit',210,30,(100,540),5, gui_font)
     pygame.display.update()
 
     run = True
@@ -203,15 +208,30 @@ def startgame(gomoku, win, gui_font, clicksound):
         pygame.display.update()
 
         # enter game with 'start' button
-        if button1.pressed == False and button1.released == True:
+        if startGame.pressed == False and startGame.released == True:
             run = False
-        elif button3.pressed == False and button3.released == True:
+
+        # if play with ai
+        if startGameAI.pressed == False and startGameAI.released == True:
+            gomoku.ai = True
+            run = False
+
+        # if play with ai hard
+        if startGameAIhard.pressed == False and startGameAIhard.released == True:
+            gomoku.aiHard = True
+            run = False
+
+        elif exit.pressed == False and exit.released == True:
             run = False
             return False
 
     return True
 
 def playgame(gomoku, win, piecesound, clicksound, gui_font):
+    if gomoku.ai == True or gomoku.aiHard == True:
+        AIplayer = gomokuAI.GomokuAI()
+        AIplayer._init_(gomoku.board)
+
     run = True
     while run:
         # get mouse click position
@@ -219,6 +239,7 @@ def playgame(gomoku, win, piecesound, clicksound, gui_font):
         # transfer to array position
         row = round(x/40 - 1)
         column = round(y/40 - 1)
+        i, j = (-1, -1)
                     
         # refreshing the whole board
         win.fill([255, 200, 100])
@@ -246,20 +267,60 @@ def playgame(gomoku, win, piecesound, clicksound, gui_font):
                 else:
                     currentpiece = 'White'
 
+                # refreshing the whole board after player moves
+                win.fill([255, 200, 100])
+                gomoku.draw(win)
+                pygame.display.update()
+
                 # check 8 directions from current move
                 for directions in ['north', 'south', 'west', 'east', 'northwest', 'northeast', 'southwest', 'southeast']:
                     winner = gomoku.win((row, column), directions, 1, currentpiece)
+
                     if winner != '':
                         run = False
                         endgame(gomoku, win, gui_font, piecesound, clicksound, winner)
                         break
 
+                # if next move is AI
+                if gomoku.ai == True or gomoku.aiHard == True:
+                    AImove = (-1, -1)
+                    if gomoku.ai == True:
+                        AImove = AIplayer.evaluate()
+                    elif gomoku.aiHard == True:
+                        AImove = AIplayer.evaluateAdvanced(row, column)
+                    i, j = AImove
+                    gomoku.move(i, j)
+                    piecesound.play()
+                    # after movement, piece color is opposite
+                    if gomoku.isblack == False:
+                        currentpiece = 'Black'
+                    else:
+                        currentpiece = 'White'
+
+                    # refreshing the whole board after ai moves
+                    win.fill([255, 200, 100])
+                    gomoku.draw(win)
+                    pygame.display.update()
+
+                    # check 8 directions from current move
+                    for directions in ['north', 'south', 'west', 'east', 'northwest', 'northeast', 'southwest', 'southeast']:
+                        winner = gomoku.win((i, j), directions, 1, currentpiece)
+
+                        if winner != '':
+                            run = False
+                            endgame(gomoku, win, gui_font, piecesound, clicksound, winner)
+                            break
+
+
+
 def endgame(gomoku, win, gui_font, piecesound, clicksound, winner):
     # ending interface
     # draw ending background
     win.blit(gomoku.ending, (0, 0))
-    startagain = Button('Start Again',200,40,(225,350),5, gui_font)
-    exit = Button('Exit',200,40,(225,400),5, gui_font)
+    startagain = Button('Start Again',210,30,(225,300),5, gui_font)
+    startagainAI = Button('Start Again AI',210,30,(225,340),5, gui_font)
+    startagainAIhard = Button('Start Again AI Hard',210,30,(225,380),5, gui_font)
+    exit = Button('Exit',210,30,(225,420),5, gui_font)
 
     run = True
     while run:
@@ -276,11 +337,21 @@ def endgame(gomoku, win, gui_font, piecesound, clicksound, winner):
 
         # draw buttons again
         startagain.draw(win, gui_font, (250, 155, 40), (150, 150, 150), clicksound)
+        startagainAI.draw(win, gui_font, (250, 155, 40), (150, 150, 150), clicksound)
+        startagainAIhard.draw(win, gui_font, (250, 155, 40), (150, 150, 150), clicksound)
         exit.draw(win, gui_font, (250, 155, 40), (150, 150, 150), clicksound)
 
         # restart game with 'start' button
         if startagain.pressed == False and startagain.released == True:
             gomoku._init_()
+            playgame(gomoku, win, piecesound, clicksound, gui_font)
+        elif startagainAI.pressed == False and startagainAI.released == True:
+            gomoku._init_()
+            gomoku.ai = True
+            playgame(gomoku, win, piecesound, clicksound, gui_font)
+        elif startagainAIhard.pressed == False and startagainAIhard.released == True:
+            gomoku._init_()
+            gomoku.aiHard = True
             playgame(gomoku, win, piecesound, clicksound, gui_font)
         elif exit.pressed == False and exit.released == True:
             pygame.quit()
