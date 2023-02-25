@@ -33,7 +33,7 @@ class GomokuAI:
         for i in range(len(self.board)):
             for j in range(len(self.board[0])):
                 if self.board[i][j] == EMPTY:
-                    newScore = self.calculateScore(i, j, -1)
+                    newScore = self.calculateScore(i, j)
                     # update highest score
                     if newScore > highestScore:
                         bestmove = (i, j)
@@ -45,14 +45,17 @@ class GomokuAI:
     def evaluateAdvanced(self, enemyrow, enemycolumn):
         bestmove = (-1, -1)
         highestScore = float('-inf')
+        dp = []
+        for i in range(len(self.board)):
+            dp.append([-1] * len(self.board[0]))
         # only evaluate around enemy move to save time
-        for i in range(enemyrow - 4, enemyrow + 5):
-            for j in range(enemycolumn - 4, enemycolumn + 5):
+        for i in range(enemyrow - 3, enemyrow + 4):
+            for j in range(enemycolumn - 3, enemycolumn + 4):
                 if 0 <= i < len(self.board) and 0 <= j < len(self.board[0]) and self.board[i][j] == EMPTY:
                     # prepare for dfs
                     discovered = set()
-                    # predict 4 future moves
-                    newScore = self.dfs(i, j, 2, 0, discovered)
+                    # predict 3 future moves
+                    newScore = self.dfs(i, j, 3, 0, discovered, dp)
                     # update highest score
                     if newScore > highestScore:
                         bestmove = (i, j)
@@ -60,13 +63,21 @@ class GomokuAI:
 
         return bestmove
 
-    def dfs(self, row, column, level, totalscore, discovered):
+    def dfs(self, row, column, level, totalscore, discovered, dp):
+
+        # dynamic programming
+        '''if dp[row][column] > -1:
+            if level % 2 == 0:
+                return -1 * dp[row][column]
+            
+            else:
+                return dp[row][column]'''
 
         discovered.add((row, column))
 
-        currentscore = self.calculateScore(row, column, level % 2)
+        currentscore = self.calculateScore(row, column)
         # when enemy moves
-        if level % 2 == 1:
+        if level % 2 == 0:
             currentscore *= -1
 
         if level == 1:
@@ -75,13 +86,15 @@ class GomokuAI:
 
         maxscore = float('-inf')
         # backtracking all possible next moves
-        for i in range(row - 4, row + 5):
-            for j in range(column - 4, column + 5):
+        for i in range(row - 3, row + 4):
+            for j in range(column - 3, column + 4):
                 if 0 <= i < len(self.board) and 0 <= j < len(self.board[0]) and self.board[i][j] == EMPTY and (i, j) not in discovered:
                     # recursive call
-                    maxscore = max(maxscore, self.dfs(i, j, level - 1, totalscore + currentscore, discovered))
+                    maxscore = max(maxscore, self.dfs(i, j, level - 1, totalscore + currentscore, discovered, dp))
 
         discovered.remove((row, column))
+
+        #dp[row][column] = maxscore
 
         return maxscore
 
@@ -89,33 +102,19 @@ class GomokuAI:
 
         
 
-    def calculateScore(self, row, column, enemy):
+    def calculateScore(self, row, column):
         # save all strings from four directions
         situations = []
         # only evaluate 4 moves from each 8 directions
         # False means it's AI's calculation
-        if enemy == 0:
-            situations.append(self.calculateDir(row, column,  'west', 4, False))
-            situations.append(self.calculateDir(row, column,  'north', 4, False))
-            situations.append(self.calculateDir(row, column,  'northwest', 4, False))
-            situations.append(self.calculateDir(row, column,  'northeast', 4, False))
-            
-        elif enemy == 1:
-            situations.append(self.calculateDir(row, column,  'west', 4, True))
-            situations.append(self.calculateDir(row, column,  'north', 4, True))
-            situations.append(self.calculateDir(row, column,  'northwest', 4, True))
-            situations.append(self.calculateDir(row, column,  'northeast', 4, True))
-
-        # -1 means this method is called by medium AI
-        elif enemy == -1:
-            situations.append(self.calculateDir(row, column,  'west', 4, False))
-            situations.append(self.calculateDir(row, column,  'north', 4, False))
-            situations.append(self.calculateDir(row, column,  'northwest', 4, False))
-            situations.append(self.calculateDir(row, column,  'northeast', 4, False))
-            situations.append(self.calculateDir(row, column,  'west', 4, True))
-            situations.append(self.calculateDir(row, column,  'north', 4, True))
-            situations.append(self.calculateDir(row, column,  'northwest', 4, True))
-            situations.append(self.calculateDir(row, column,  'northeast', 4, True))
+        situations.append(self.calculateDir(row, column,  'west', 4, False))
+        situations.append(self.calculateDir(row, column,  'north', 4, False))
+        situations.append(self.calculateDir(row, column,  'northwest', 4, False))
+        situations.append(self.calculateDir(row, column,  'northeast', 4, False))
+        situations.append(self.calculateDir(row, column,  'west', 4, True))
+        situations.append(self.calculateDir(row, column,  'north', 4, True))
+        situations.append(self.calculateDir(row, column,  'northwest', 4, True))
+        situations.append(self.calculateDir(row, column,  'northeast', 4, True))
 
         # some conditions that can dramatically increase the score
         score1000 = 0
@@ -130,52 +129,27 @@ class GomokuAI:
         enemyscore = 0
         for situation in situations:
             currentscore = 0
-            if enemy == 0:
-                for score in self.scores:
-                    for s in self.scores[score]:
-                        if s in situation:
-                            currentscore = score
+            for score in self.scores:
+                for s in self.scores[score]:
+                    if s in situation:
+                        currentscore = score
                 
-                if currentscore == 1000:
-                    score1000 += 1
+            if currentscore == 1000:
+                score1000 += 1
 
-                if currentscore == 100:
-                    score100 += 1
+            if currentscore == 100:
+                score100 += 1
 
-            elif enemy == 1:
-                for score in self.enemyscores:
-                    for s in self.enemyscores[score]:
-                        if s in situation:
-                            currentscore = score
-                
-                if currentscore == 1000:
-                    score1000 += 1
+            for score in self.enemyscores:
+                for s in self.enemyscores[score]:
+                    if s in situation:
+                        enemyscore = score
 
-                if currentscore == 100:
-                    score100 += 1
+            if enemyscore == 1000:
+                enemyscore1000 += 1
 
-            elif enemy == -1:
-                for score in self.scores:
-                    for s in self.scores[score]:
-                        if s in situation:
-                            currentscore = score
-                
-                if currentscore == 1000:
-                    score1000 += 1
-
-                if currentscore == 100:
-                    score100 += 1
-
-                for score in self.enemyscores:
-                    for s in self.enemyscores[score]:
-                        if s in situation:
-                            enemyscore = score
-
-                if enemyscore == 1000:
-                    enemyscore1000 += 1
-
-                if enemyscore == 100:
-                    enemyscore100 += 1
+            if enemyscore == 100:
+                enemyscore100 += 1
 
             totalscore += (currentscore + enemyscore)
 
@@ -234,12 +208,4 @@ class GomokuAI:
                 i += 1
 
         return s
-
-
-                
-
-'''if __name__ == '__main__':
-    gomokuAI = GomokuAI()
-    gomokuAI._init_(0)
-    print(gomokuAI.scores)'''
 
