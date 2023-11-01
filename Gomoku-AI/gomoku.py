@@ -1,19 +1,17 @@
 import pygame, sys, gomokuAI
 
 # set black, white and empty in every cell of the board
-EMPTY = 0
-BLACK = 1
-WHITE = 2
+EMPTY, BLACK, WHITE = 0, 1, 2
 
 # set black and white color for window display
-black = (0, 0, 0)
-white = (255, 255, 255)
+BLACK_COLOR = (0, 0, 0)
+WHITE_COLOR = (255, 255, 255)
 
 buttons = []
 
 class Button:
 	def __init__(self,text,width,height,pos,elevation, gui_font):
-		#Core attributes 
+		# Core attributes 
 		self.pressed, self.released = False, False
 		self.elevation = elevation
 		self.dynamic_elecation = elevation
@@ -26,10 +24,12 @@ class Button:
 		# bottom rectangle 
 		self.bottom_rect = pygame.Rect(pos,(width,height))
 		self.bottom_color = '#354B5E'
-		#text
+
+		# text
 		self.text = text
 		self.text_surf = gui_font.render(text,True,'#FFFFFF')
 		self.text_rect = self.text_surf.get_rect(center = self.top_rect.center)
+
 		buttons.append(self)
  
 	def change_text(self, newtext, gui_font):
@@ -57,47 +57,42 @@ class Button:
 		    if pygame.mouse.get_pressed()[0]:
 			    self.dynamic_elecation = 0
 			    self.pressed = True
-			    self.change_text(f"{self.text}", gui_font)
+
 		    else:
 			    self.dynamic_elecation = self.elevation
-			    if self.pressed == True:
+			    if self.pressed:
 				    clicksound.play()
 				    self.pressed, self.released = False, True
-				    self.change_text(self.text, gui_font)
+
 	    else:
 		    self.dynamic_elecation = self.elevation
 		    self.top_color = color2
 
-                    
-
+                
 
 class Gomoku:
 
+    DIRECTIONS = {
+        'north': (-1, 0),
+        'south': (1, 0),
+        'west': (0, -1),
+        'east': (0, 1),
+        'northwest': (-1, -1),
+        'northeast': (-1, 1),
+        'southwest': (1, -1),
+        'southeast': (1, 1)
+    }
+
     # initialize the board
-    def _init_(self):
-        # create empty board 15 * 15
-        self.board = [[]] * 15
-        for row in range(15):
-            self.board[row] = [EMPTY] * 15
+    def __init__(self):
+        self.board = [[EMPTY] * 15 for _ in range(15)]
         self.isblack = True
+        self.whitepiece = pygame.transform.scale(pygame.image.load('whitepiece.png'), (40, 40))
+        self.blackpiece = pygame.transform.scale(pygame.image.load('blackpiece.png'), (40, 40))
+        self.background = pygame.transform.scale(pygame.image.load('background.jpg'), (640, 640))
+        self.ending = pygame.transform.scale(pygame.image.load('ending.jpg'), (640, 640))
+        self.ai, self.aiHard = False, False
 
-        # initialize black and white pieces
-        self.whitepiece = pygame.image.load('whitepiece.png')
-        # decrease image size
-        self.whitepiece = pygame.transform.scale(self.whitepiece, (40, 40))
-
-        self.blackpiece = pygame.image.load('blackpiece.png')
-        # decrease image size
-        self.blackpiece = pygame.transform.scale(self.blackpiece, (40, 40))
-
-        # initialize start game background
-        self.background = pygame.image.load('background.jpg')
-        self.background = pygame.transform.scale(self.background, (640, 640))
-        self.ending = pygame.image.load('ending.jpg')
-        self.ending = pygame.transform.scale(self.ending, (640, 640))
-
-        self.ai = False
-        self.aiHard = False
 
     def move(self, row, column):
         if 0 <= row < 15 and 0 <= column < 15:
@@ -110,75 +105,51 @@ class Gomoku:
         return False
 
     # apply dfs to decide winner
-    def win(self, cordinate, direction, level, currentpiece):
-        row, column = cordinate
+    def win(self, coordinate, direction, level, currentpiece):
+        row, column = coordinate
+        dx, dy = Gomoku.DIRECTIONS[direction]
+        next_coordinate = (row + dx, column + dy)
+        
         if currentpiece == 'White':
-            temp = WHITE
-        elif currentpiece == 'Black':
-            temp = BLACK
-
-        if 0 <= row < 15 and 0 <= column < 15:
-            # base case: found winner
-            if level == 6:
-                return currentpiece
-            
-            # base case: no winner
-            if self.board[row][column] != temp:
-                return ''
-
+            piece_value = WHITE
         else:
+            piece_value = BLACK
+
+        if not (0 <= row < 15 and 0 <= column < 15 and self.board[row][column] == piece_value):
             return ''
 
-        # move 8 directions
-        if direction == 'north':
-            return self.win((row - 1, column), 'north', level + 1, currentpiece)
-        elif direction == 'south':
-            return self.win((row + 1, column), 'south', level + 1, currentpiece)
-        elif direction == 'west':
-            return self.win((row, column - 1), 'west', level + 1, currentpiece)
-        elif direction == 'east':
-            return self.win((row, column + 1), 'east', level + 1, currentpiece)
-        elif direction == 'northwest':
-            return self.win((row - 1, column - 1), 'northwest', level + 1, currentpiece)
-        elif direction == 'northeast':
-            return self.win((row - 1, column + 1), 'northeast', level + 1, currentpiece)
-        if direction == 'southwest':
-            return self.win((row + 1, column - 1), 'southwest', level + 1, currentpiece)
-        if direction == 'southeast':
-            return self.win((row + 1, column + 1), 'southeast', level + 1, currentpiece)
-        
+        if level == 5:
+            return currentpiece
+
+        return self.win(next_coordinate, direction, level + 1, currentpiece)
+
 
     # method to draw everything for the game
     def draw(self, win):
         # draw lines for board
-        for i in range(1, 16):
+        for i in range(15):
             # horizontally
-            pygame.draw.line(win, black, (40, i * 40), (600, i * 40))
+            pygame.draw.line(win, BLACK_COLOR, (40, i * 40), (600, i * 40))
             # vertically
-            pygame.draw.line(win, black, (40 * i, 40), (i * 40, 600))
+            pygame.draw.line(win, BLACK_COLOR, (40 * i, 40), (i * 40, 600))
             # draw board frame
-            pygame.draw.rect(win, black, (36, 36, 568, 568), 5)
+            pygame.draw.rect(win, BLACK_COLOR, (36, 36, 568, 568), 5)
 
             # draw several centers
-            pygame.draw.circle(win, black, (320, 320), 6, 0)
-            pygame.draw.circle(win, black, (160, 160), 6, 0)
-            pygame.draw.circle(win, black, (160, 480), 6, 0)
-            pygame.draw.circle(win, black, (480, 160), 6, 0)
-            pygame.draw.circle(win, black, (480, 480), 6, 0)
+            pygame.draw.circle(win, BLACK_COLOR, (320, 320), 6, 0)
+            pygame.draw.circle(win, BLACK_COLOR, (160, 160), 6, 0)
+            pygame.draw.circle(win, BLACK_COLOR, (160, 480), 6, 0)
+            pygame.draw.circle(win, BLACK_COLOR, (480, 160), 6, 0)
+            pygame.draw.circle(win, BLACK_COLOR, (480, 480), 6, 0)
 
             # draw moves from player
             for row in range(len(self.board)):
                 for column in range(len(self.board[row])):
-                    if self.board[row][column] != EMPTY:
-                        color = self.board[row][column]
-                        x = (row + 1) * 40
-                        y = (column + 1) * 40
+                    if self.board[row][column] == BLACK:
+                        win.blit(self.blackpiece, ((column + 1) * 40 - 20, (row + 1) * 40 - 20))
+                    elif self.board[row][column] == WHITE:
+                        win.blit(self.whitepiece, ((column + 1) * 40 - 20, (row + 1) * 40 - 20))
 
-                        if color == WHITE:
-                            win.blit(self.whitepiece, (y - 20, x - 20))
-
-                        else:
-                            win.blit(self.blackpiece, (y - 20, x - 20))
 
 def startgame(gomoku, win, gui_font, clicksound):
     # draw background
@@ -229,8 +200,8 @@ def startgame(gomoku, win, gui_font, clicksound):
 
 def playgame(gomoku, win, piecesound, clicksound, gui_font):
     if gomoku.ai == True or gomoku.aiHard == True:
-        AIplayer = gomokuAI.GomokuAI()
-        AIplayer._init_(gomoku.board)
+        AIplayer = gomokuAI.GomokuAI(gomoku.board)
+
 
     run = True
     while run:
@@ -246,7 +217,7 @@ def playgame(gomoku, win, piecesound, clicksound, gui_font):
         gomoku.draw(win)
         # draw a small rectangle to represent available moves
         if 0 <= row < 15 and 0 <= column < 15 and gomoku.board[row][column] == EMPTY:
-            pygame.draw.rect(win, white, (y - 20, x - 20, 40, 40), 2, 1)
+            pygame.draw.rect(win, WHITE_COLOR, (y - 20, x - 20, 40, 40), 2, 1)
 
         pygame.display.update()
 
@@ -330,9 +301,9 @@ def endgame(gomoku, win, gui_font, piecesound, clicksound, winner):
                 pygame.quit()
 
         # draw winner
-        win.blit(pygame.font.Font(None,80).render('GAME OVER',True, (100, 100, 100), white), (175, 150))
-        win.blit(pygame.font.Font(None,60).render('Winner: ',True, (100, 100, 100), white), (190, 240))
-        win.blit(pygame.font.Font(None,60).render(winner ,True, (100, 100, 100), white), (355, 240))
+        win.blit(pygame.font.Font(None,80).render('GAME OVER',True, (100, 100, 100), WHITE_COLOR), (175, 150))
+        win.blit(pygame.font.Font(None,60).render('Winner: ',True, (100, 100, 100), WHITE_COLOR), (190, 240))
+        win.blit(pygame.font.Font(None,60).render(winner ,True, (100, 100, 100), WHITE_COLOR), (355, 240))
 
 
         # draw buttons again
@@ -343,14 +314,14 @@ def endgame(gomoku, win, gui_font, piecesound, clicksound, winner):
 
         # restart game with 'start' button
         if startagain.pressed == False and startagain.released == True:
-            gomoku._init_()
+            gomoku.__init__()
             playgame(gomoku, win, piecesound, clicksound, gui_font)
         elif startagainAI.pressed == False and startagainAI.released == True:
-            gomoku._init_()
+            gomoku.__init__()
             gomoku.ai = True
             playgame(gomoku, win, piecesound, clicksound, gui_font)
         elif startagainAIhard.pressed == False and startagainAIhard.released == True:
-            gomoku._init_()
+            gomoku.__init__()
             gomoku.aiHard = True
             playgame(gomoku, win, piecesound, clicksound, gui_font)
         elif exit.pressed == False and exit.released == True:
@@ -362,7 +333,7 @@ def endgame(gomoku, win, gui_font, piecesound, clicksound, winner):
 def main():
     # initialize the game
     gomoku = Gomoku()
-    gomoku._init_()
+    gomoku.__init__()
 
     # initialize a game window
     pygame.init()
@@ -373,8 +344,6 @@ def main():
     # get sound effect
     piecesound = pygame.mixer.Sound('piece.wav')
     clicksound = pygame.mixer.Sound('click.wav')
-    pygame.mixer.music.load('fridays.mp3')
-    pygame.mixer.music.play(-1)
 
     # set font for buttons
     gui_font = pygame.font.Font(None,30)

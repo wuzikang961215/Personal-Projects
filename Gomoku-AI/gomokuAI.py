@@ -6,13 +6,13 @@ WHITE = 2
 class GomokuAI:
 
     # initialize different scores
-    def _init_(self, board):
+    def __init__(self, board):
         # score: situation
-        self.enemyscores = {10: ['011200', '001120', '002110', '021100', '001010', '010100', '00100', '010000', '000010'],
-                            100: ['001112', '010112', '011012', '211100', '211010', '001100', '011000', '000110'],
-                            1000: ['001110', '011100', '010110', '011010', '11110', '01111', '10111', '11011', '11101'],
-                            100000000: ['011110'],
-                            1000000000: ['11111']}
+        self.enemyscores = {5: ['011200', '001120', '002110', '021100', '001010', '010100', '00100', '010000', '000010'],
+                            50: ['001112', '010112', '011012', '211100', '211010', '001100', '011000', '000110'],
+                            500: ['001110', '011100', '010110', '011010', '11110', '01111', '10111', '11011', '11101'],
+                            80000000: ['011110'],
+                            800000000: ['11111']}
         self.scores = {10: ['022100', '002210', '001220', '012200', '002020', '020200', '00200', '020000', '000020'],
                        100: ['002221', '020221', '022021', '122200', '122020', '002200', '022000', '000220'],
                        1000: ['002220', '022200', '020220', '022020', '22220', '02222', '20222', '22022', '22202'],
@@ -44,63 +44,74 @@ class GomokuAI:
     # hard difficulty AI: advanced depth evaluation
     def evaluateAdvanced(self, enemyrow, enemycolumn):
         bestmove = (-1, -1)
+        # If the current move is the AI's, then we want to maximize the score. 
+        # If it's the enemy's, we want to minimize. We'll start with a very low 
+        # initial score for the maximizing player.
         highestScore = float('-inf')
-        dp = []
-        for i in range(len(self.board)):
-            dp.append([-1] * len(self.board[0]))
+
+        dp = {}  # Initializing the cache as an empty dictionary
+
         # only evaluate around enemy move to save time
-        for i in range(enemyrow - 3, enemyrow + 4):
-            for j in range(enemycolumn - 3, enemycolumn + 4):
+        for i in range(len(self.board)):
+            for j in range(len(self.board[0])):
                 if 0 <= i < len(self.board) and 0 <= j < len(self.board[0]) and self.board[i][j] == EMPTY:
-                    # prepare for dfs
-                    discovered = set()
-                    # predict 3 future moves
-                    newScore = self.dfs(i, j, 3, 0, discovered, dp)
-                    # update highest score
+                    discovered = set()  # For tracking visited nodes in DFS
+                    # predict 11 future moves
+                    newScore = self.dfs(i, j, 11, discovered, dp)
+                    # get near the enemy at the beginning
+                    if enemyrow - 3 <= i < enemyrow + 4 and enemycolumn - 3 <= j < enemycolumn + 4:
+                        newScore += 95
+                    # update highest score and corresponding move
                     if newScore > highestScore:
                         bestmove = (i, j)
                         highestScore = newScore
 
         return bestmove
 
-    def dfs(self, row, column, level, totalscore, discovered, dp):
 
-        # dynamic programming
-        '''if dp[row][column] > -1:
-            if level % 2 == 0:
-                return -1 * dp[row][column]
-            
-            else:
-                return dp[row][column]'''
+    def dfs(self, row, column, level, discovered, dp):
+
+        # Check if we've already computed this state
+        if (row, column, level) in dp:
+            return dp[(row, column, level)]
 
         discovered.add((row, column))
 
         currentscore = self.calculateScore(row, column)
-        # when enemy moves
+        
+        # Adjust score based on whose turn it is
         if level % 2 == 0:
             currentscore *= -1
 
+        # Base case: if at the lowest depth, return the score for this move
         if level == 1:
             discovered.remove((row, column))
-            return totalscore + currentscore
+            return currentscore
 
-        maxscore = float('-inf')
-        # backtracking all possible next moves
+        # Initialize best_score. If it's AI's turn, start with negative infinity (maximizing). 
+        # If it's opponent's turn, start with positive infinity (minimizing).
+        best_score = float('-inf') if level % 2 == 1 else float('inf')
+
+        # Explore all possible next moves
         for i in range(row - 3, row + 4):
             for j in range(column - 3, column + 4):
                 if 0 <= i < len(self.board) and 0 <= j < len(self.board[0]) and self.board[i][j] == EMPTY and (i, j) not in discovered:
-                    # recursive call
-                    maxscore = max(maxscore, self.dfs(i, j, level - 1, totalscore + currentscore, discovered, dp))
+                    # Recursive call
+                    score_for_this_move = self.dfs(i, j, level - 1, discovered, dp)
 
+                    # Update best_score based on whose turn it is
+                    if level % 2 == 1:  # AI's turn: maximize
+                        best_score = max(best_score, currentscore + score_for_this_move)
+                    else:  # Opponent's turn: minimize
+                        best_score = min(best_score, currentscore + score_for_this_move)
+
+        # Cleanup and cache the result
         discovered.remove((row, column))
+        dp[(row, column, level)] = best_score
 
-        #dp[row][column] = maxscore
+        return best_score
 
-        return maxscore
 
-        
-
-        
 
     def calculateScore(self, row, column):
         # save all strings from four directions
@@ -154,11 +165,14 @@ class GomokuAI:
             totalscore += (currentscore + enemyscore)
 
         # increase total score under some circumstances
-        if score1000 >= 2 or enemyscore1000 >= 2:
-            totalscore *= 6
+        if score1000 >= 2:
+            totalscore *= 5
+
+        if enemyscore1000 >= 2:
+            totalscore *= 4
 
         if score100 >= 1 and score1000 >= 1:
-            totalscore *= 2
+            totalscore *= 3
 
         if enemyscore100 >= 1 and enemyscore1000 >= 1:
             totalscore *= 2
