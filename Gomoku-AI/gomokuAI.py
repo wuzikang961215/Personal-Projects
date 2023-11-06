@@ -57,10 +57,10 @@ class GomokuAI:
                 if 0 <= i < len(self.board) and 0 <= j < len(self.board[0]) and self.board[i][j] == EMPTY:
                     discovered = set()  # For tracking visited nodes in DFS
                     # predict 11 future moves
-                    newScore = self.dfs(i, j, 11, discovered, dp)
+                    newScore = self.dfs(i, j, 15, discovered, dp)
                     # get near the enemy at the beginning
                     if enemyrow - 3 <= i < enemyrow + 4 and enemycolumn - 3 <= j < enemycolumn + 4:
-                        newScore += 95
+                        newScore += 200
                     # update highest score and corresponding move
                     if newScore > highestScore:
                         bestmove = (i, j)
@@ -169,13 +169,13 @@ class GomokuAI:
             totalscore *= 5
 
         if enemyscore1000 >= 2:
-            totalscore *= 4
+            totalscore *= 5
 
         if score100 >= 1 and score1000 >= 1:
-            totalscore *= 3
+            totalscore *= 4
 
         if enemyscore100 >= 1 and enemyscore1000 >= 1:
-            totalscore *= 2
+            totalscore *= 4
 
         return totalscore
 
