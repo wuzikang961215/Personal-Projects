@@ -4,6 +4,7 @@ import gomokuAI
 import gomokuAIAggressive
 from copy import deepcopy
 from gameData import GameManager, GameData
+from gomokuAIRandomForest import GomokuAIRandomForest
 
 class AIAutomaticPlay:
     def __init__(self, num_games=500):
@@ -23,9 +24,13 @@ class AIAutomaticPlay:
         current_piece = 'Black'
 
         while move_count < self.MAX_MOVES:
-            AIEvaluation = current_player.evaluateAdvanced(i, j)
-            AImove = AIEvaluation[0]
-            AIscore = AIEvaluation[1]
+            if isinstance(current_player, GomokuAIRandomForest):
+                AImove, AIscore = current_player.evaluate(gomoku.board, move_count)
+            else:
+                AIEvaluation = current_player.evaluateAdvanced(i, j)
+                AImove = AIEvaluation[0]
+                AIscore = AIEvaluation[1]
+
             i, j = AImove
             if not gomoku.move(i, j):
                 break  # Invalid move, end the game

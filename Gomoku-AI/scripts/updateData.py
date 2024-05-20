@@ -42,10 +42,9 @@ def count_local_stones(board, row, column, radius=3, ai_stone=1, enemy_stone=2):
     return ai_count, enemy_count
 
 
-def calculateFeatures(move_record, previous_records):
+def calculateFeatures(move_record):
     row, column = move_record['position']  # Directly use the tuple
     player = move_record['player']
-    move_record['position_x'], move_record['position_y'] = row, column
 
     ai_stones, enemy_stones = count_local_stones(move_record['board_state'], row, column)
     move_record['local_ai_stones'] = ai_stones
@@ -80,32 +79,8 @@ def calculateFeatures(move_record, previous_records):
                 move_record[feature] += 1
                 move_record['total_threats'] += 1
 
-    # Aggressive and defensive sequences
-    # Player-specific sequence tracking
-    player_key = f"{player}_record"
-    if player_key not in previous_records:
-        previous_records[player_key] = {'aggressive_sequence': 0, 'defensive_pressure': 0}
-
-    # Update aggressive and defensive sequences based on conditions
-    current_aggressive_sequence = previous_records[player_key]['aggressive_sequence']
-    current_defensive_pressure = previous_records[player_key]['defensive_pressure']
-
-    if (move_record['major_opportunity'] >= 1 or move_record['critical_open'] >= 1 or move_record['win_sequence'] >= 1):
-        move_record['aggressive_sequence'] = current_aggressive_sequence + 1
-    else:
-        move_record['aggressive_sequence'] = 0
-
-    if (move_record['critical_threat'] >= 1 or move_record['lose_sequence'] >= 1):
-        move_record['defensive_pressure'] = current_defensive_pressure + 1
-    else:
-        move_record['defensive_pressure'] = 0
-
-    # Update previous records for the current player
-    previous_records[player_key]['aggressive_sequence'] = move_record['aggressive_sequence']
-    previous_records[player_key]['defensive_pressure'] = move_record['defensive_pressure']
-
     
-    # old_keys = ['ai_minor_threat_or_block', 'ai_moderate_threat_or_block', 'ai_major_threat_or_block', 'ai_critical_open', 'ai_win_sequence',
+    # old_keys = ['position_x', 'position_y', 'aggressive_sequence', 'defensive_pressure', 'ai_minor_threat_or_block', 'ai_moderate_threat_or_block', 'ai_major_threat_or_block', 'ai_critical_open', 'ai_win_sequence',
     #         'enemy_minor_threat_or_block', 'enemy_moderate_threat_or_block', 'enemy_major_threat_or_block', 'enemy_critical_open', 'enemy_win_sequence', 'major_opportunity_counter']
 
     # for key in old_keys:
@@ -154,8 +129,7 @@ def calculateDir(row, column, direction, depth, enemy, board):
 if __name__ == "__main__":
     manager = GameManager.load_state()
     for game in manager.games:
-        previous_records = {}
         for move_record in game.moves:
-            calculateFeatures(move_record, previous_records)
+            calculateFeatures(move_record)
 
     manager.save_state()

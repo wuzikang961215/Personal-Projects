@@ -355,13 +355,18 @@ def playgame(gomoku, win, piecesound, clicksound, gui_font):
                 gomoku.draw(win)
                 pygame.display.update()
 
-                game.record_move(currentpiece, row, column, deepcopy(gomoku.board), 0)
+                # record human movement data here
+                game.record_move(currentpiece, row, column, deepcopy(gomoku.board), gomokuAI.GomokuAI(gomoku.board).calculateScore(row, column))
 
                 # check 8 directions from current move
                 for directions in ['north', 'south', 'west', 'east', 'northwest', 'northeast', 'southwest', 'southeast']:
                     winner = gomoku.win((row, column), currentpiece)
 
                     if winner != '':
+                        # record winner data here
+                        game.end_game(winner, deepcopy(gomoku.board))
+                        manager.finish_game(game)
+                        manager.save_state()
                         run = False
                         endgame(gomoku, win, gui_font, piecesound, clicksound, winner)
                         break
@@ -398,6 +403,10 @@ def playgame(gomoku, win, piecesound, clicksound, gui_font):
                         winner = gomoku.win((i, j), currentpiece)
 
                         if winner != '':
+                            # record winner data here
+                            game.end_game(winner, deepcopy(gomoku.board))
+                            manager.finish_game(game)
+                            manager.save_state()
                             run = False
                             endgame(gomoku, win, gui_font, piecesound, clicksound, winner)
                             break

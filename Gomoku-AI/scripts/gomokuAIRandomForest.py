@@ -32,10 +32,10 @@ class GomokuAIRandomForest:
             # Introduce randomness in selecting the best move
             best_move = random.choice(best_moves)
 
-        # Print the best move's features for debugging
-        print(f"\nBest Move: {best_move}, Best Score: {best_score}")
-        for feature_name, value in features_df.iloc[0].items():
-            print(f"{feature_name}: {value}")
+        # # Print the best move's features for debugging
+        # print(f"\nBest Move: {best_move}, Best Score: {best_score}")
+        # for feature_name, value in features_df.iloc[0].items():
+        #     print(f"{feature_name}: {value}")
 
         return best_move, best_score
 
